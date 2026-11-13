@@ -1,0 +1,49 @@
+<mxfile host="app.diagrams.net">
+  <diagram id="cassandra-laboratorio" name="Clúster de prueba">
+    <mxGraphModel grid="1" gridSize="10" guides="1" page="0" math="0" shadow="0" background="#ffffff">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="titulo" value="Arquitectura del laboratorio de Cassandra" style="text;html=1;align=left;verticalAlign=middle;fontSize=28;fontStyle=1;fontColor=#13243A;" vertex="1" parent="1">
+          <mxGeometry x="40" y="24" width="820" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="subtitulo" value="TA-IND-01 · Melanie Michelle Muñoz Vera" style="text;html=1;align=left;fontSize=15;fontColor=#465A70;" vertex="1" parent="1">
+          <mxGeometry x="40" y="65" width="820" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="cluster" value="" style="rounded=1;arcSize=6;dashed=1;dashPattern=6 5;strokeWidth=2;strokeColor=#829BB4;fillColor=#F3F7FB;" vertex="1" parent="1">
+          <mxGeometry x="40" y="218" width="820" height="346" as="geometry"/>
+        </mxCell>
+        <mxCell id="cluster-titulo" value="Cassandra 5.0.9 en Docker · datacenter1" style="text;html=1;align=left;fontSize=17;fontStyle=1;fontColor=#213C59;" vertex="1" parent="1">
+          <mxGeometry x="63" y="232" width="750" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="cliente" value="&lt;b&gt;PowerShell / cqlsh&lt;/b&gt;&lt;br&gt;Inicio de la consulta con docker exec" style="rounded=1;arcSize=18;whiteSpace=wrap;html=1;strokeColor=#244C6A;fillColor=#244C6A;fontColor=#FFFFFF;fontSize=16;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="268" y="108" width="364" height="63" as="geometry"/>
+        </mxCell>
+        <mxCell id="nodo1" value="&lt;b&gt;Nodo 1&lt;/b&gt;&lt;br&gt;Coordinador en esta prueba · Réplica 1" style="rounded=1;arcSize=15;whiteSpace=wrap;html=1;strokeWidth=2;strokeColor=#397886;fillColor=#DCEFF1;fontColor=#183646;fontSize=17;" vertex="1" parent="1">
+          <mxGeometry x="268" y="275" width="364" height="74" as="geometry"/>
+        </mxCell>
+        <mxCell id="nodo2" value="&lt;b&gt;Nodo 2&lt;/b&gt;&lt;br&gt;Réplica 2" style="rounded=1;arcSize=15;whiteSpace=wrap;html=1;strokeWidth=2;strokeColor=#7491AE;fillColor=#FFFFFF;fontColor=#213C59;fontSize=17;" vertex="1" parent="1">
+          <mxGeometry x="122" y="419" width="253" height="74" as="geometry"/>
+        </mxCell>
+        <mxCell id="nodo3" value="&lt;b&gt;Nodo 3&lt;/b&gt;&lt;br&gt;Réplica 3" style="rounded=1;arcSize=15;whiteSpace=wrap;html=1;strokeWidth=2;strokeColor=#7491AE;fillColor=#FFFFFF;fontColor=#213C59;fontSize=17;" vertex="1" parent="1">
+          <mxGeometry x="525" y="419" width="253" height="74" as="geometry"/>
+        </mxCell>
+        <mxCell id="cql" value="Consulta CQL" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeWidth=2;strokeColor=#244C6A;endArrow=block;endFill=1;labelBackgroundColor=#FFFFFF;fontColor=#13243A;fontSize=14;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" source="cliente" target="nodo1" parent="1">
+          <mxGeometry relative="1" x="-0.4" as="geometry"><mxPoint x="63" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="intercambio2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeWidth=2;strokeColor=#397886;startArrow=block;startFill=1;endArrow=block;endFill=1;exitX=0.2;exitY=1;entryX=0.5;entryY=0;" edge="1" source="nodo1" target="nodo2" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="intercambio3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeWidth=2;strokeColor=#397886;startArrow=block;startFill=1;endArrow=block;endFill=1;exitX=0.8;exitY=1;entryX=0.5;entryY=0;" edge="1" source="nodo1" target="nodo3" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="rotulo" value="Solicitudes y respuestas&lt;br&gt;entre nodos" style="text;html=1;align=center;verticalAlign=middle;fontSize=14;fontColor=#314E6A;" vertex="1" parent="1">
+          <mxGeometry x="355" y="367" width="190" height="38" as="geometry"/>
+        </mxCell>
+        <mxCell id="rf" value="&lt;b&gt;Factor de replicación: 3&lt;/b&gt; · Una copia del dato de prueba por nodo" style="text;html=1;align=center;verticalAlign=middle;fontSize=16;fontColor=#213C59;" vertex="1" parent="1">
+          <mxGeometry x="70" y="513" width="760" height="32" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
