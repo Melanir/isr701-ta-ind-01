@@ -1,0 +1,40 @@
+name: ta-ind-cassandra
+
+x-cassandra: &cassandra
+  image: cassandra:5.0.9
+  environment:
+    CASSANDRA_CLUSTER_NAME: TA-IND-01
+    CASSANDRA_SEEDS: nodo1
+    MAX_HEAP_SIZE: 768M
+    HEAP_NEWSIZE: 192M
+  healthcheck:
+    test: ["CMD", "cqlsh", "127.0.0.1", "-e", "SELECT release_version FROM system.local;"]
+    interval: 20s
+    timeout: 10s
+    start_period: 90s
+    retries: 15
+
+services:
+  nodo1:
+    <<: *cassandra
+    volumes:
+      - datos1:/var/lib/cassandra
+  nodo2:
+    <<: *cassandra
+    depends_on:
+      nodo1:
+        condition: service_healthy
+    volumes:
+      - datos2:/var/lib/cassandra
+  nodo3:
+    <<: *cassandra
+    depends_on:
+      nodo2:
+        condition: service_healthy
+    volumes:
+      - datos3:/var/lib/cassandra
+
+volumes:
+  datos1:
+  datos2:
+  datos3:
