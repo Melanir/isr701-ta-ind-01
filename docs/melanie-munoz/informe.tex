@@ -1,0 +1,87 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{graphicx,booktabs,csquotes,float}
+\usepackage[backend=biber,style=ieee,sorting=none]{biblatex}
+\addbibresource{referencias.bib}
+\DefineBibliographyStrings{spanish}{artno={art\adddot}}
+\usepackage{xurl}
+\usepackage[hidelinks]{hyperref}
+
+\begin{document}
+\begin{titlepage}
+  \centering
+  {\Large Universidad Técnica Estatal de Quevedo\par}
+  Facultad de ciencias de la computacion
+  Ingeniería de Software\par
+  Aplicaciones Distribuidas (ISR-701)\par
+  \vfill
+  {\Large TA-IND-01\par}
+  {\LARGE Análisis crítico comparativo de un sistema distribuido\par}
+  % Agregar el sistema una vez confirmada la elección en el foro.
+  \vfill
+  Melanie Michelle Muñoz Vera\par
+  % Confirmar el paralelo y la fecha de entrega.
+  \url{https://github.com/Melanir/isr701-ta-ind-01}\par
+  \vfill
+  Borrador de estructura
+\end{titlepage}
+
+\section*{Resumen}
+% Escribir al terminar el análisis. Entre 150 y 200 palabras.
+
+\section{Introducción}
+Apache Cassandra es una base de datos NoSQL de columnas anchas. La usan equipos que necesitan distribuir grandes volúmenes de datos entre varios servidores y mantener el servicio disponible cuando falla un nodo. Un ejemplo es Discord. Su equipo de ingeniería documentó que, a principios de 2022, almacenaba billones de mensajes en un clúster de 177 nodos Cassandra. El crecimiento también trajo problemas de latencia y mantenimiento que motivaron su migración posterior a ScyllaDB \cite{cassandra5dynamo,ingram2023discord}.
+
+Este informe analiza cómo el nivel de consistencia afecta la posibilidad de leer un dato cuando se pierden réplicas. La prueba utiliza tres nodos Cassandra en Docker y compara la misma lectura con \texttt{ONE} y \texttt{QUORUM} antes, durante y después de detener dos nodos. Como contexto, se toman estudios que comparan configuraciones de consistencia de Cassandra, MongoDB y Redis en la nube \cite{ferreira2025ycsb,ferreira2024cloud}. La comparación arquitectónica con MongoDB se apoya en su documentación sobre conjuntos de réplicas \cite{mongodb8replication}. La práctica local se limita a Cassandra y observa si la consulta puede completarse.
+
+\section{Arquitectura de Cassandra}
+Cassandra funciona como un clúster de nodos pares. El nodo que recibe una solicitud del cliente actúa como coordinador de esa operación y se comunica con las réplicas que corresponden al dato. Los nodos mantienen información sobre la membresía y el estado del clúster mediante el protocolo \textit{gossip} \cite{cassandra5dynamo}.
+
+Para ubicar los datos, Cassandra calcula un hash de la clave de partición y lo usa como token para determinar qué nodos almacenan la partición. En la tabla \texttt{prueba}, la clave de partición es \texttt{id}. El espacio de claves \texttt{ta\_ind\_01} usa \texttt{NetworkTopologyStrategy} con un factor de replicación de tres en \texttt{datacenter1}. Así, los tres nodos guardan una copia de la partición consultada. El nivel de consistencia indica cuántas réplicas deben responder para completar una operación. En esta configuración, una lectura con \texttt{ONE} requiere una respuesta y con \texttt{QUORUM} requiere dos \cite{cassandra5dynamo}.
+
+La Figura~\ref{fig:cassandra-laboratorio} muestra el recorrido de la consulta en el montaje de Cassandra 5.0.9. Desde PowerShell se ejecuta \texttt{cqlsh} dentro del contenedor del nodo~1, mediante \texttt{docker exec}. El nodo~1 coordina la consulta y también almacena una réplica. Los nodos~2 y~3 guardan las otras dos. Los tres contenedores se ejecutan en una sola computadora, por lo que el montaje permite observar fallos de nodos individuales dentro del mismo equipo.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth,height=0.35\textheight,keepaspectratio]{anexos/cassandra-laboratorio.png}
+  \caption{Recorrido de una consulta CQL en el laboratorio. Diagrama elaborado a partir del bosquejo del Anexo~A.}
+  \label{fig:cassandra-laboratorio}
+\end{figure}
+
+\section{Análisis con los conceptos de la Unidad 1}
+\subsection{Transparencias de distribución}
+% Acceso, ubicación, migración, reubicación, replicación, concurrencia y fallos.
+\subsection{CAP y PACELC}
+% Indicar la configuración y distinguir partición de operación normal.
+\subsection{Modelos de comunicación}
+\subsection{Tolerancia a fallos}
+% Mecanismos, límites e incidente documentado, si existe.
+
+\section{Experimentación propia}
+% Guardar comandos y salidas reales junto al informe. Incorporar cuatro
+% capturas originales, cada una con un dato de identificación visible.
+
+\section{Ejemplos de mi entorno}
+% Dos observaciones propias y su relación con los conceptos de la unidad.
+
+\section{Análisis comparativo}
+% Comparar con otro sistema real mediante una tabla de al menos cinco criterios.
+
+\section{Postura crítica}
+\section{Conclusiones}
+
+\section*{Declaración de uso de inteligencia artificial}
+% Registrar las herramientas y versiones efectivamente usadas, su aporte
+% y las comprobaciones realizadas antes de entregar.
+
+\printbibliography[title={Referencias}]
+
+\appendix
+\section{Esquema inicial a mano}
+% Agregar la fotografía original del bosquejo con nombre y fecha visibles.
+\section{Lectura de las fuentes}
+% Incluir tres capturas de lectura propias con anotación, página y cita.
+\end{document}
