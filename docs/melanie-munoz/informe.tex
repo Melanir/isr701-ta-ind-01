@@ -11,6 +11,7 @@
 \usepackage[hidelinks]{hyperref}
 
 \begin{document}
+\hypersetup{pageanchor=false}
 \begin{titlepage}
   \centering
   {\Large Universidad Técnica Estatal de Quevedo\par}
@@ -28,6 +29,7 @@
   \vfill
   Borrador de estructura
 \end{titlepage}
+\hypersetup{pageanchor=true}
 
 \section*{Resumen}
 Este informe analiza Apache Cassandra como sistema distribuido y lo compara con MongoDB para identificar cómo sus decisiones de replicación afectan la disponibilidad y la consistencia. Se configuraron tres nodos de Cassandra en Docker, en una sola computadora, con factor de replicación tres. Se insertó una fila con el nivel \texttt{ALL} y se consultó antes, durante y después de detener dos contenedores. Con todos los nodos activos, \texttt{ONE} y \texttt{QUORUM} devolvieron la fila. Durante la caída, \texttt{ONE} siguió respondiendo y \texttt{QUORUM} falló porque exigía dos réplicas accesibles. Tras recuperar los nodos, \texttt{QUORUM} volvió a funcionar. La comparación documental muestra que MongoDB utiliza una mayoría de votantes para mantener o elegir un primario, mientras Cassandra exige un número de respuestas según el nivel de cada operación. Los resultados respaldan la elección de \texttt{ONE} para lecturas que toleran datos desactualizados. La prueba mide si la consulta puede completarse. Evaluar la latencia, las escrituras concurrentes y las particiones de red requeriría experimentos adicionales.
