@@ -178,7 +178,16 @@ $consulta = 'CONSISTENCY QUORUM; SELECT * FROM ta_ind_01.prueba WHERE id = 1;'
 \end{table}
 
 \section{Ejemplos de mi entorno}
-% Dos observaciones propias y su relación con los conceptos de la unidad.
+
+\subsection{Registro del tema en el SGA de la UTEQ}
+Para esta actividad registré Apache Cassandra en el foro del SGA de la UTEQ. Hice el registro desde el navegador y pude identificar el tema por su nombre dentro del foro. Esto ilustra el modelo cliente-servidor. El navegador actúa como cliente y envía la publicación al servicio del SGA, que la recibe y la pone a disposición de quienes tienen acceso al foro.
+
+También se aprecia la transparencia de ubicación. Para publicar el tema me bastó con entrar al foro de la asignatura. La ubicación física de los servidores o del almacenamiento queda oculta en esa interacción. Lo que pude observar fue la publicación desde el navegador. Para evaluar la tolerancia a fallos del SGA, haría falta observar cómo responde el servicio cuando falla alguno de sus componentes.
+
+\subsection{Consulta de versiones del informe en GitHub}
+Al revisar el repositorio de esta actividad en GitHub, pude ver que el PDF del análisis de la Unidad~1 y el PDF de la experimentación quedaron en dos commits distintos, \texttt{4da2559} y \texttt{e601a2a}. El historial me permite identificar en qué versión se agregó cada PDF y consultar la versión del archivo que corresponde a ese commit.
+
+Este ejemplo también muestra cómo se comunican dos partes de un sistema distribuido. Git permite trabajar sobre una copia local del repositorio y publicar cambios en el repositorio remoto \cite{githubCloningRepo}. Al consultar GitHub desde el navegador, se ve el estado publicado. Que una edición local todavía no aparezca en la web es una consecuencia de ese paso explícito de publicación. En la prueba de Cassandra, en cambio, el coordinador se comunica con las réplicas para atender la lectura en curso según el nivel solicitado. En ambos casos es necesario distinguir qué copias intervienen para interpretar lo que se ve en pantalla.
 
 \section{Análisis comparativo}
 % Comparar con otro sistema real mediante una tabla de al menos cinco criterios.
