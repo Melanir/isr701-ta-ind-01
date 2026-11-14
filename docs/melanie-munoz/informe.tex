@@ -197,7 +197,7 @@ Al revisar el repositorio de esta actividad en GitHub, pude ver que el PDF del a
 Este ejemplo también muestra cómo se comunican dos partes de un sistema distribuido. Git permite trabajar sobre una copia local del repositorio y publicar cambios en el repositorio remoto \cite{githubCloningRepo}. Al consultar GitHub desde el navegador, se ve el estado publicado. Que una edición local todavía no aparezca en la web es una consecuencia de ese paso explícito de publicación. En la prueba de Cassandra, en cambio, el coordinador se comunica con las réplicas para atender la lectura en curso según el nivel solicitado. En ambos casos es necesario distinguir qué copias intervienen para interpretar lo que se ve en pantalla.
 
 \section{Análisis comparativo}
-La Tabla~\ref{tab:cassandra-mongodb} compara Cassandra 5.0 con MongoDB 8.0 en un conjunto de réplicas. Ambos mantienen copias de los datos en varios nodos. La prueba de la Sección~\ref{sec:experimento-cassandra} aporta evidencia para Cassandra. Los escenarios de MongoDB se analizan a partir de su documentación.
+La Tabla~\ref{tab:cassandra-mongodb} compara Cassandra 5.0 con MongoDB 8.0 en un conjunto de réplicas. MongoDB 8.0 se publicó en octubre de 2024 \cite{mongodb2024release}. Ambos mantienen copias de los datos en varios nodos. La prueba de la Sección~\ref{sec:experimento-cassandra} aporta evidencia para Cassandra. Los escenarios de MongoDB se analizan a partir de su documentación.
 
 \begin{table}[H]
   \centering
@@ -250,13 +250,15 @@ La prueba local registró si la consulta pudo completarse. Para comparar tiempos
 
 \paragraph{Cuándo elegiría otra opción.} Para una aplicación en la que una decisión dependa del estado más reciente de un documento, como confirmar si un pedido ya fue cancelado, evitaría usar una lectura de Cassandra con \texttt{ONE}. Si el requisito es reflejar todas las escrituras previas confirmadas por mayoría sobre ese documento, consideraría MongoDB con lectura \texttt{linearizable} en el primario y escrituras confirmadas por mayoría \cite{mongodb8linearizable}. Aceptaría que, si un conjunto de tres votantes pierde la mayoría, se interrumpan las escrituras hasta recuperar un primario \cite{mongodb8elections}. En ese caso, me parece preferible que la operación espere o devuelva un error a que la aplicación actúe con un estado desactualizado.
 
+El costo de una configuración también depende de la carga. Nejati Sharif Aldin y Nayebi Pour estudiaron cómo interactúan los niveles de consistencia, la estrategia de replicación y la frecuencia del procesador al evaluar el rendimiento y el consumo energético de Cassandra \cite{nejati2026cassandra}. Mi prueba observó si una lectura podía completarse. Esas otras métricas requerirían mediciones propias.
+
 \section{Conclusiones}
 Con factor de replicación tres, una réplica activa bastó para leer con \texttt{ONE} una fila que ya estaba escrita. El mismo nodo devolvió un error con \texttt{QUORUM} porque ese nivel exigía dos respuestas. Al restaurar los tres nodos, la misma lectura con \texttt{QUORUM} volvió a completarse.
 
 La disponibilidad debe analizarse por operación. En Cassandra, el nivel de consistencia determina el mínimo de respuestas para la consulta. En un conjunto de réplicas de MongoDB, la mayoría de votantes permite mantener o elegir al primario que recibe las escrituras \cite{cassandra5dynamo,mongodb8elections}. Para elegir entre ambos, primero definiría qué lecturas y escrituras deben seguir disponibles y cuánto retraso en la actualización de los datos puede aceptar la aplicación. El montaje local permitió observar el efecto de perder nodos. Quedan por evaluar la latencia y el comportamiento bajo una partición de red.
 
 \section*{Declaración de uso de inteligencia artificial}
-Usé Gemini de Google para traducir fragmentos de las referencias en inglés. Usé Codex de OpenAI como guía para preparar y ejecutar la práctica de Cassandra y como apoyo para redactar, corregir y organizar el texto y el código LaTeX. La interpretación del experimento se comprobó con los comandos y las salidas de las cuatro capturas originales. Los datos bibliográficos se contrastaron con las publicaciones. Las versiones específicas de los modelos no quedaron registradas.
+Usé Gemini 4 Argon de Google para traducir fragmentos de las referencias en inglés. Usé Codex de OpenAI para guiar la configuración y la práctica de Cassandra, localizar fuentes y apoyar la redacción, la corrección del texto y la preparación del archivo LaTeX. Para el análisis se consultaron las publicaciones originales y se cotejaron sus datos bibliográficos. Los resultados de la práctica se contrastaron con los comandos y las salidas visibles en las cuatro capturas originales. La versión exacta de Codex utilizada durante la práctica no quedó registrada.
 
 \clearpage
 \printbibliography[title={Referencias}]
