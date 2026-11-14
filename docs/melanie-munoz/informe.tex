@@ -55,10 +55,18 @@ La Figura~\ref{fig:cassandra-laboratorio} muestra el recorrido de la consulta en
 \subsection{Transparencias de distribución}
 % Acceso, ubicación, migración, reubicación, replicación, concurrencia y fallos.
 \subsection{CAP y PACELC}
-% Indicar la configuración y distinguir partición de operación normal.
+\paragraph{CAP.} Si una partición de red impide que los nodos se comuniquen, el teorema CAP establece que el sistema no puede garantizar a la vez la consistencia linealizable y una respuesta exitosa a toda solicitud que llegue a un nodo operativo \cite{gilbert2002cap}. La prueba de Cassandra permite examinar una consecuencia relacionada. Se detuvieron dos contenedores, de modo que el coordinador solo tenía una réplica disponible. Esa réplica devolvió la fila con \texttt{ONE}. Con \texttt{QUORUM}, el servidor devolvió \texttt{Unavailable} porque necesitaba dos réplicas y solo tenía una activa. El resultado muestra cómo el mínimo de respuestas afecta la disponibilidad de una lectura.
+
+Cassandra permite elegir el nivel de consistencia por operación \cite{cassandra5dynamo}. Con \texttt{ONE}, en otra ejecución, una lectura podría obtener un valor desactualizado si la réplica consultada aún no recibió una escritura reciente. En esta prueba, la fila se insertó con \texttt{ALL} antes de detener los nodos y se leyó sin modificarla. La pérdida de acceso a dos réplicas sirve para ilustrar el dilema de CAP. Comprobar el comportamiento ante una partición real requeriría mantener los nodos activos y bloquear la comunicación entre ellos. Evaluar la consistencia linealizable requeriría además observar el orden de lecturas y escrituras.
+
+\paragraph{PACELC.} El modelo de Abadi plantea una elección entre disponibilidad y consistencia durante una partición (\textit{PAC}), y entre latencia y consistencia cuando la red funciona con normalidad (\textit{ELC}) \cite{abadi2012pacelc}. Con los tres nodos activos, ambas lecturas devolvieron la fila. \texttt{QUORUM} debía esperar dos respuestas para completar la consulta, mientras que a \texttt{ONE} le bastaba una. Esto permite plantear que esperar una segunda respuesta puede aumentar la latencia, sobre todo si una réplica tarda en responder. Las capturas registran el éxito o fallo de la consulta y la hora de cada etapa. Medir la latencia requeriría cronometrar consultas repetidas bajo las mismas condiciones.
+
+Como contraste, Redžepagić et al. midieron la latencia de \emph{escritura} de Cassandra en Kubernetes. En la Tabla~22 de su estudio, el promedio pasó de \(1{,}23\) ms con \texttt{ONE} a \(3{,}16\) ms con \texttt{QUORUM} \cite{redzepagic2026kubernetes}. Esas cifras corresponden a la carga y al entorno de ese estudio. En el laboratorio de este informe, la comparación se limitó a la disponibilidad de una lectura.
 \subsection{Modelos de comunicación}
 \subsection{Tolerancia a fallos}
-% Mecanismos, límites e incidente documentado, si existe.
+La replicación permitió leer la fila aun con dos nodos detenidos. \texttt{nodetool status} mostró dos nodos en \texttt{DN} (caídos, en estado normal dentro del anillo) y uno en \texttt{UN} (activo, en estado normal). Con factor de replicación tres, el umbral de \texttt{ONE} permite tolerar la pérdida de hasta dos réplicas para leer un dato presente en la réplica accesible. \texttt{QUORUM} requiere dos réplicas accesibles y, por tanto, admite la pérdida de una \cite{cassandra5dynamo}. La prueba observó los extremos de tres y una réplica activa.
+
+Tras reiniciar los contenedores, los tres nodos volvieron a \texttt{UN} y la consulta con \texttt{QUORUM} volvió a devolver la fila. Se recuperó así la capacidad de completar esa lectura con el umbral solicitado. Para comprobar la sincronización de las réplicas durante la recuperación, haría falta escribir un dato mientras los otros nodos están detenidos y revisar si lo reciben al volver. Además, los tres contenedores comparten una computadora. Si esta se apaga, los tres nodos quedan fuera de servicio al mismo tiempo.
 
 \section{Experimentación propia}
 % Guardar comandos y salidas reales junto al informe. Incorporar cuatro
