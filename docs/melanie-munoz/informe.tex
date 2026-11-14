@@ -69,8 +69,113 @@ La replicación permitió leer la fila aun con dos nodos detenidos. \texttt{node
 Tras reiniciar los contenedores, los tres nodos volvieron a \texttt{UN} y la consulta con \texttt{QUORUM} volvió a devolver la fila. Se recuperó así la capacidad de completar esa lectura con el umbral solicitado. Para comprobar la sincronización de las réplicas durante la recuperación, haría falta escribir un dato mientras los otros nodos están detenidos y revisar si lo reciben al volver. Además, los tres contenedores comparten una computadora. Si esta se apaga, los tres nodos quedan fuera de servicio al mismo tiempo.
 
 \section{Experimentación propia}
-% Guardar comandos y salidas reales junto al informe. Incorporar cuatro
-% capturas originales, cada una con un dato de identificación visible.
+\label{sec:experimento-cassandra}
+El 12 de noviembre de 2026 se probó si Cassandra 5.0.9 podía leer una fila escrita previamente, antes, durante y después de detener dos de sus tres nodos. El clúster se ejecutó en Docker, con factor de replicación 3 en \texttt{datacenter1}. Las horas de las capturas corresponden a Ecuador continental (UTC\(\,-5\)). La carpeta \texttt{experimento/} contiene la configuración (\texttt{compose.yaml}, \texttt{preparar.cql}), la secuencia completa (\texttt{COMANDOS.md}) y las salidas registradas (\texttt{RESULTADOS.md}).
+
+\subsection{Preparación del clúster}
+Desde la carpeta \texttt{experimento}, el clúster se levantó en PowerShell y se cargó el esquema de la tabla \texttt{ta\_ind\_01.prueba}. El primer \texttt{nodetool status} mostró los tres nodos activos (Figura~\ref{fig:exp-nodos}).
+
+{\small
+\begin{verbatim}
+$docker = "$env:LOCALAPPDATA\Programs\DockerDesktop\resources\bin\docker.exe"
+$nodo = 'ta-ind-cassandra-nodo1-1'
+& $docker compose -f compose.yaml up -d --wait --wait-timeout 420
+& $docker exec $nodo nodetool status
+Get-Content -Raw preparar.cql | & $docker exec -i $nodo cqlsh
+\end{verbatim}
+}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth,height=.24\textheight,keepaspectratio]{experimento/capturas/01-tres-nodos-activos.png}
+  \caption{Estado inicial a las 19:15:23. Los tres nodos aparecen como \texttt{UN}.}
+  \label{fig:exp-nodos}
+\end{figure}
+
+\subsection{Antes de la caída}
+La fila se insertó con \texttt{ALL}. Luego se consultó el mismo identificador con \texttt{ONE} y \texttt{QUORUM}. Ambas lecturas devolvieron la fila 1 con el mensaje \enquote{Prueba de Melanie} (Figura~\ref{fig:exp-antes}).
+
+{\small
+\begin{verbatim}
+Get-Date -Format 'yyyy-MM-dd HH:mm:ss zzz'
+@'
+CONSISTENCY ALL;
+INSERT INTO ta_ind_01.prueba (id, mensaje) VALUES (1, 'Prueba de Melanie');
+CONSISTENCY ONE;
+SELECT * FROM ta_ind_01.prueba WHERE id = 1;
+CONSISTENCY QUORUM;
+SELECT * FROM ta_ind_01.prueba WHERE id = 1;
+'@ | & $docker exec -i $nodo cqlsh
+\end{verbatim}
+}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth,height=.32\textheight,keepaspectratio]{experimento/capturas/02-lecturas-con-tres-nodos.png}
+  \caption{Escritura con \texttt{ALL} y lecturas con tres nodos activos a las 19:19:31.}
+  \label{fig:exp-antes}
+\end{figure}
+
+\subsection{Durante la caída}
+Se detuvieron los contenedores \texttt{nodo2} y \texttt{nodo3}. Cuando \texttt{nodetool status} mostró una fila \texttt{UN} y dos \texttt{DN}, se repitieron las lecturas desde el nodo 1.
+
+{\small
+\begin{verbatim}
+& $docker compose -f compose.yaml stop nodo2 nodo3
+Get-Date -Format 'yyyy-MM-dd HH:mm:ss zzz'
+& $docker exec $nodo nodetool status
+@'
+CONSISTENCY ONE;
+SELECT * FROM ta_ind_01.prueba WHERE id = 1;
+CONSISTENCY QUORUM;
+SELECT * FROM ta_ind_01.prueba WHERE id = 1;
+'@ | & $docker exec -i $nodo cqlsh
+\end{verbatim}
+}
+
+\texttt{ONE} devolvió la fila 1. Con \texttt{QUORUM}, el servidor devolvió \texttt{Unavailable}. El cliente \texttt{cqlsh} mostró \texttt{NoHostAvailable}. El detalle del error indicó \texttt{required\_replicas = 2} y \texttt{alive\_replicas = 1} (Figura~\ref{fig:exp-durante}).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{experimento/capturas/03-lecturas-con-un-nodo.png}
+  \caption{Lecturas con un nodo activo a las 19:21:23. El error de \texttt{QUORUM} aparece al final de la captura.}
+  \label{fig:exp-durante}
+\end{figure}
+
+\subsection{Después de la recuperación}
+Se levantaron de nuevo los contenedores detenidos y se repitió la lectura con \texttt{QUORUM}. Los tres nodos volvieron a aparecer como \texttt{UN} y la consulta devolvió la fila 1 (Figura~\ref{fig:exp-despues}).
+
+{\small
+\begin{verbatim}
+& $docker compose -f compose.yaml up -d --wait --wait-timeout 360
+Get-Date -Format 'yyyy-MM-dd HH:mm:ss zzz'
+& $docker exec $nodo nodetool status
+$consulta = 'CONSISTENCY QUORUM; SELECT * FROM ta_ind_01.prueba WHERE id = 1;'
+& $docker exec $nodo cqlsh -e $consulta
+\end{verbatim}
+}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{experimento/capturas/04-lectura-quorum-recuperada.png}
+  \caption{Lectura con \texttt{QUORUM} tras la recuperación a las 19:24:31.}
+  \label{fig:exp-despues}
+\end{figure}
+
+\begin{table}[H]
+  \centering
+  \caption{Resultados de las lecturas de la fila 1 por etapa.}
+  \label{tab:exp-cassandra}
+  \begin{tabular}{@{}lcll@{}}
+    \toprule
+    Etapa & Nodos activos & \texttt{ONE} & \texttt{QUORUM} \\
+    \midrule
+    Antes de la caída & 3 & Devuelve la fila & Devuelve la fila \\
+    Durante la caída & 1 & Devuelve la fila & \texttt{Unavailable} \\
+    Tras la recuperación & 3 & Sin nueva consulta & Devuelve la fila \\
+    \bottomrule
+  \end{tabular}
+\end{table}
 
 \section{Ejemplos de mi entorno}
 % Dos observaciones propias y su relación con los conceptos de la unidad.
