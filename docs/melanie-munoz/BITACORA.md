@@ -10,7 +10,7 @@ Instalé Docker Desktop. Codex preparó la configuración, levantó los tres nod
 
 Usé IA como apoyo para traducir fragmentos en inglés, localizar fuentes verificables, contrastar sus datos bibliográficos con los DOI y seguir los pasos de la prueba. Codex de OpenAI también redactó esta entrada con base en lo que hicimos y organizó los comandos y los resultados a partir de mis capturas originales.
 
-**Tiempo dedicado:** aproximadamente 4 horas.
+**Tiempo dedicado:** aproximadamente 5 horas.
 
 **Registro en GitHub.** [Fuentes](https://github.com/Melanir/isr701-ta-ind-01/commit/b0bad13) · [Capturas de lectura](anexos/lectura/) · [Prueba de Cassandra](https://github.com/Melanir/isr701-ta-ind-01/commit/4502591).
 
@@ -20,10 +20,10 @@ Usé IA como apoyo para traducir fragmentos en inglés, localizar fuentes verifi
 
 Hice el bosquejo a mano y revisé el diagrama digital para que mostrara PowerShell, cqlsh y el nodo coordinador. Revisé los borradores de la introducción, el análisis de la Unidad 1, la práctica y los ejemplos. Corregí el ejemplo de la elección del tema porque el anuncio se hizo en WhatsApp. La comparación técnica quedó para la siguiente sesión.
 
-**Tiempo dedicado:** pendiente de confirmar.
+**Tiempo dedicado:** más de 6 horas.
 
 ## 14 de noviembre de 2026
 
 Revisé la comparación entre Cassandra y MongoDB. La prueba había medido la disponibilidad de una lectura en Cassandra, así que la comparación con MongoDB se apoyó en su documentación. Con apoyo de Codex se integraron las secciones finales, las capturas de los anexos y la declaración de uso de IA. Se compiló el informe con pdfLaTeX y Biber.
 
-**Tiempo dedicado:** pendiente de confirmar.
+**Tiempo dedicado:** 3 horas.
