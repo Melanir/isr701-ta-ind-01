@@ -30,7 +30,7 @@
 \end{titlepage}
 
 \section*{Resumen}
-% Escribir al terminar el análisis. Entre 150 y 200 palabras.
+Este informe analiza Apache Cassandra como sistema distribuido y lo compara con MongoDB para identificar cómo sus decisiones de replicación afectan la disponibilidad y la consistencia. Se configuraron tres nodos de Cassandra en Docker, en una sola computadora, con factor de replicación tres. Se insertó una fila con el nivel \texttt{ALL} y se consultó antes, durante y después de detener dos contenedores. Con todos los nodos activos, \texttt{ONE} y \texttt{QUORUM} devolvieron la fila. Durante la caída, \texttt{ONE} siguió respondiendo y \texttt{QUORUM} falló porque exigía dos réplicas accesibles. Tras recuperar los nodos, \texttt{QUORUM} volvió a funcionar. La comparación documental muestra que MongoDB utiliza una mayoría de votantes para mantener o elegir un primario, mientras Cassandra exige un número de respuestas según el nivel de cada operación. Los resultados respaldan la elección de \texttt{ONE} para lecturas que toleran datos desactualizados. La prueba mide si la consulta puede completarse. Evaluar la latencia, las escrituras concurrentes y las particiones de red requeriría experimentos adicionales.
 
 \section{Introducción}
 Apache Cassandra es una base de datos NoSQL de columnas anchas. La usan equipos que necesitan distribuir grandes volúmenes de datos entre varios servidores y mantener el servicio disponible cuando falla un nodo. Un ejemplo es Discord. Su equipo de ingeniería documentó que, a principios de 2022, almacenaba billones de mensajes en un clúster de 177 nodos Cassandra. El crecimiento también trajo problemas de latencia y mantenimiento que motivaron su migración posterior a ScyllaDB \cite{cassandra5dynamo,ingram2023discord}.
@@ -53,7 +53,11 @@ La Figura~\ref{fig:cassandra-laboratorio} muestra el recorrido de la consulta en
 
 \section{Análisis con los conceptos de la Unidad 1}
 \subsection{Transparencias de distribución}
-% Acceso, ubicación, migración, reubicación, replicación, concurrencia y fallos.
+\textbf{Acceso y ubicación.} En la práctica usé la misma consulta CQL para leer la fila con tres nodos y con uno. El coordinador localiza las réplicas mediante la clave de partición. La dirección del nodo al que se conecta el cliente sí forma parte de la configuración \cite{cassandra5dynamo}.
+
+\textbf{Migración y reubicación.} Cassandra puede redistribuir rangos de datos al cambiar la composición del clúster. La consulta conserva la misma clave, pero un cambio de dirección del nodo al que está conectada la sesión puede requerir reconexión. La prueba mantuvo fijo el nodo coordinador y no evaluó movimientos de datos con solicitudes en curso \cite{cassandra5dynamo}.
+
+\textbf{Replicación, concurrencia y fallos.} El coordinador decide qué réplicas contactar según la operación. El cliente sí elige el nivel de consistencia. En escrituras ordinarias que compiten por el mismo dato, Cassandra resuelve el conflicto usando marcas de tiempo \cite{cassandra5dynamo}. En la prueba, la caída fue transparente para la lectura con \texttt{ONE}, que conservó el mismo resultado. Con \texttt{QUORUM}, el error hizo visible la falta de réplicas.
 \subsection{CAP y PACELC}
 \paragraph{CAP.} Si una partición de red impide que los nodos se comuniquen, el teorema CAP establece que el sistema no puede garantizar a la vez la consistencia linealizable y una respuesta exitosa a toda solicitud que llegue a un nodo operativo \cite{gilbert2002cap}. La prueba de Cassandra permite examinar una consecuencia relacionada. Se detuvieron dos contenedores, de modo que el coordinador solo tenía una réplica disponible. Esa réplica devolvió la fila con \texttt{ONE}. Con \texttt{QUORUM}, el servidor devolvió \texttt{Unavailable} porque necesitaba dos réplicas y solo tenía una activa. El resultado muestra cómo el mínimo de respuestas afecta la disponibilidad de una lectura.
 
@@ -63,10 +67,13 @@ Cassandra permite elegir el nivel de consistencia por operación \cite{cassandra
 
 Como contraste, Redžepagić et al. midieron la latencia de \emph{escritura} de Cassandra en Kubernetes. En la Tabla~22 de su estudio, el promedio pasó de \(1{,}23\) ms con \texttt{ONE} a \(3{,}16\) ms con \texttt{QUORUM} \cite{redzepagic2026kubernetes}. Esas cifras corresponden a la carga y al entorno de ese estudio. En el laboratorio de este informe, la comparación se limitó a la disponibilidad de una lectura.
 \subsection{Modelos de comunicación}
+El sistema combina un modelo cliente-servidor entre \texttt{cqlsh} y Cassandra con un modelo entre pares dentro del clúster. El cliente envía solicitudes CQL mediante el protocolo binario nativo sobre TCP y recibe un resultado o un error \cite{cassandra5protocol}. En el laboratorio, cada consulta de la terminal esperó su respuesta. Entre nodos, el coordinador intercambia mensajes con las réplicas y la operación espera las respuestas que exige su nivel de consistencia. El intercambio periódico de estado por \emph{gossip} ocurre en segundo plano \cite{cassandra5dynamo}.
 \subsection{Tolerancia a fallos}
 La replicación permitió leer la fila aun con dos nodos detenidos. \texttt{nodetool status} mostró dos nodos en \texttt{DN} (caídos, en estado normal dentro del anillo) y uno en \texttt{UN} (activo, en estado normal). Con factor de replicación tres, el umbral de \texttt{ONE} permite tolerar la pérdida de hasta dos réplicas para leer un dato presente en la réplica accesible. \texttt{QUORUM} requiere dos réplicas accesibles y, por tanto, admite la pérdida de una \cite{cassandra5dynamo}. La prueba observó los extremos de tres y una réplica activa.
 
 Tras reiniciar los contenedores, los tres nodos volvieron a \texttt{UN} y la consulta con \texttt{QUORUM} volvió a devolver la fila. Se recuperó así la capacidad de completar esa lectura con el umbral solicitado. Para comprobar la sincronización de las réplicas durante la recuperación, haría falta escribir un dato mientras los otros nodos están detenidos y revisar si lo reciben al volver. Además, los tres contenedores comparten una computadora. Si esta se apaga, los tres nodos quedan fuera de servicio al mismo tiempo.
+
+\paragraph{Incidente en producción.} El equipo de Discord documentó que algunas particiones de mensajes concentraban tantas lecturas que subía la latencia de los nodos responsables. El efecto alcanzaba otras consultas porque las operaciones con cuórum dependían de respuestas de esas réplicas \cite[sección \enquote{Our Cassandra Troubles}]{ingram2023discord}. El caso muestra que una réplica activa también puede degradar el servicio si se satura.
 
 \section{Experimentación propia}
 \label{sec:experimento-cassandra}
@@ -237,17 +244,51 @@ La elección depende de lo que la aplicación necesite garantizar. Para una cons
 La prueba local registró si la consulta pudo completarse. Para comparar tiempos habría que controlar la carga, la red y las garantías solicitadas. Ferreira et al. usaron \texttt{ONE} y \texttt{ALL} en Cassandra, y compararon lecturas \texttt{local} y \texttt{linearizable} en MongoDB en su propio entorno \cite[sección \enquote{Database configurations}]{ferreira2024cloud}. Sus mediciones corresponden a esas configuraciones.
 
 \section{Postura crítica}
+\paragraph{Fortalezas.} Considero que la principal ventaja de Cassandra es poder ajustar el nivel de consistencia a lo que necesita cada operación. Al detener dos de los tres nodos, la lectura con \texttt{ONE} todavía devolvió la fila que había escrito antes de la caída. Esto resulta útil para consultas en las que importa seguir respondiendo y se puede tolerar que una réplica devuelva un dato desactualizado. La arquitectura también permite que distintos nodos coordinen solicitudes sin elegir un primario para el clúster \cite{cassandra5dynamo}.
+
+\paragraph{Limitaciones.} Con dos nodos detenidos, \texttt{QUORUM} devolvió \texttt{Unavailable} porque quedaba una réplica activa y se necesitaban dos. La consulta volvió a funcionar cuando levanté los nodos. El resultado demuestra que la disponibilidad depende del nivel solicitado. Mi prueba se limita a una fila escrita con \texttt{ALL}, a lecturas sin escrituras concurrentes y a tres contenedores en una sola computadora. Por eso, el resultado sirve para evaluar la pérdida de nodos en esa configuración. Comparar la latencia o evaluar una partición de red exigiría pruebas específicas.
+
+\paragraph{Cuándo elegiría otra opción.} Para una aplicación en la que una decisión dependa del estado más reciente de un documento, como confirmar si un pedido ya fue cancelado, evitaría usar una lectura de Cassandra con \texttt{ONE}. Si el requisito es reflejar todas las escrituras previas confirmadas por mayoría sobre ese documento, consideraría MongoDB con lectura \texttt{linearizable} en el primario y escrituras confirmadas por mayoría \cite{mongodb8linearizable}. Aceptaría que, si un conjunto de tres votantes pierde la mayoría, se interrumpan las escrituras hasta recuperar un primario \cite{mongodb8elections}. En ese caso, me parece preferible que la operación espere o devuelva un error a que la aplicación actúe con un estado desactualizado.
+
 \section{Conclusiones}
+Con factor de replicación tres, una réplica activa bastó para leer con \texttt{ONE} una fila que ya estaba escrita. El mismo nodo devolvió un error con \texttt{QUORUM} porque ese nivel exigía dos respuestas. Al restaurar los tres nodos, la misma lectura con \texttt{QUORUM} volvió a completarse.
+
+La disponibilidad debe analizarse por operación. En Cassandra, el nivel de consistencia determina el mínimo de respuestas para la consulta. En un conjunto de réplicas de MongoDB, la mayoría de votantes permite mantener o elegir al primario que recibe las escrituras \cite{cassandra5dynamo,mongodb8elections}. Para elegir entre ambos, primero definiría qué lecturas y escrituras deben seguir disponibles y cuánto retraso en la actualización de los datos puede aceptar la aplicación. El montaje local permitió observar el efecto de perder nodos. Quedan por evaluar la latencia y el comportamiento bajo una partición de red.
 
 \section*{Declaración de uso de inteligencia artificial}
-% Registrar las herramientas y versiones efectivamente usadas, su aporte
-% y las comprobaciones realizadas antes de entregar.
+Usé Gemini de Google para traducir fragmentos de las referencias en inglés. Usé Codex de OpenAI como guía para preparar y ejecutar la práctica de Cassandra y como apoyo para redactar, corregir y organizar el texto y el código LaTeX. La interpretación del experimento se comprobó con los comandos y las salidas de las cuatro capturas originales. Los datos bibliográficos se contrastaron con las publicaciones. Las versiones específicas de los modelos no quedaron registradas.
 
+\clearpage
 \printbibliography[title={Referencias}]
 
+\clearpage
 \appendix
 \section{Esquema inicial a mano}
-% Agregar la fotografía original del bosquejo con nombre y fecha visibles.
+El bosquejo sirvió de base para el diagrama de la arquitectura. En la versión digital se distingue \texttt{cqlsh} dentro del flujo de PowerShell y se mantiene el papel del nodo 1 como coordinador de la prueba.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{anexos/bosquejo-cassandra-original.png}
+  \caption{Fotografía del bosquejo original del clúster de Cassandra.}
+\end{figure}
+
+\clearpage
 \section{Lectura de las fuentes}
-% Incluir tres capturas de lectura propias con anotación, página y cita.
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth,height=.36\textheight,keepaspectratio]{anexos/lectura/ieee-access-2025-p63432.png}
+  \caption{Ferreira et al., p.~63432. Sección sobre las cargas y los parámetros de YCSB \cite{ferreira2025ycsb}.}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth,height=.36\textheight,keepaspectratio]{anexos/lectura/journal-cloud-computing-2024-p07.png}
+  \caption{Ferreira et al., p.~7 del PDF. Configuración de Cassandra con tres nodos y niveles \texttt{ONE} y \texttt{ALL} \cite{ferreira2024cloud}.}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{anexos/lectura/computers-2026-p21.png}
+  \caption{Redžepagić et al., p.~21 del PDF. Tabla 22 sobre el rendimiento de escritura con \texttt{ONE} y \texttt{QUORUM} \cite{redzepagic2026kubernetes}.}
+\end{figure}
 \end{document}
