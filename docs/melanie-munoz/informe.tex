@@ -3,7 +3,7 @@
 \usepackage[T1]{fontenc}
 \usepackage[spanish]{babel}
 \usepackage[margin=2.5cm]{geometry}
-\usepackage{graphicx,booktabs,csquotes,float}
+\usepackage{graphicx,booktabs,csquotes,float,tabularx}
 \usepackage[backend=biber,style=ieee,sorting=none]{biblatex}
 \addbibresource{referencias.bib}
 \DefineBibliographyStrings{spanish}{artno={art\adddot}}
@@ -190,7 +190,51 @@ Al revisar el repositorio de esta actividad en GitHub, pude ver que el PDF del a
 Este ejemplo también muestra cómo se comunican dos partes de un sistema distribuido. Git permite trabajar sobre una copia local del repositorio y publicar cambios en el repositorio remoto \cite{githubCloningRepo}. Al consultar GitHub desde el navegador, se ve el estado publicado. Que una edición local todavía no aparezca en la web es una consecuencia de ese paso explícito de publicación. En la prueba de Cassandra, en cambio, el coordinador se comunica con las réplicas para atender la lectura en curso según el nivel solicitado. En ambos casos es necesario distinguir qué copias intervienen para interpretar lo que se ve en pantalla.
 
 \section{Análisis comparativo}
-% Comparar con otro sistema real mediante una tabla de al menos cinco criterios.
+La Tabla~\ref{tab:cassandra-mongodb} compara Cassandra 5.0 con MongoDB 8.0 en un conjunto de réplicas. Ambos mantienen copias de los datos en varios nodos. La prueba de la Sección~\ref{sec:experimento-cassandra} aporta evidencia para Cassandra. Los escenarios de MongoDB se analizan a partir de su documentación.
+
+\begin{table}[H]
+  \centering
+  \caption{Cassandra y MongoDB según seis criterios de la Unidad 1.}
+  \label{tab:cassandra-mongodb}
+  \small
+  \renewcommand{\arraystretch}{1.14}
+  \begin{tabularx}{\linewidth}{@{}p{.20\linewidth}XX@{}}
+    \toprule
+    \textbf{Criterio} & \textbf{Cassandra 5.0} & \textbf{MongoDB 8.0} \\
+    \midrule
+    Modelo de comunicación &
+    Un nodo coordina la solicitud del cliente. Los nodos intercambian información de estado mediante \emph{gossip} \cite{cassandra5dynamo}. &
+    El primario recibe las escrituras del cliente. Los secundarios replican las operaciones de forma asíncrona \cite{mongodb8replication}. \\
+    \addlinespace
+    Transparencia de replicación &
+    El coordinador localiza las réplicas de la partición. El cliente puede elegir el nivel de consistencia \cite{cassandra5dynamo}. &
+    El conjunto mantiene copias de los datos. El cliente puede configurar qué miembros usar para las lecturas \cite{mongodb8replication}. \\
+    \addlinespace
+    Consistencia de lectura &
+    Con tres réplicas, \texttt{ONE} pide una respuesta y \texttt{QUORUM} pide dos \cite{cassandra5dynamo}. &
+    Una lectura \texttt{linearizable} en el primario puede reflejar, para un documento, todas las escrituras previas confirmadas por mayoría \cite{mongodb8linearizable}. \\
+    \addlinespace
+    Partición de red (CAP) &
+    Con acceso a una sola de tres réplicas, el coordinador puede leer con \texttt{ONE}. Con \texttt{QUORUM} necesita dos accesibles \cite{cassandra5dynamo}. &
+    El primario del lado minoritario pierde su rol al detectar que dejó de comunicarse con la mayoría de votantes \cite{mongodb8elections}. \\
+    \addlinespace
+    Latencia (PACELC) &
+    En operación normal, esperar dos respuestas con \texttt{QUORUM} puede alargar una lectura frente a \texttt{ONE} \cite{cassandra5dynamo,abadi2012pacelc}. &
+    Una lectura \texttt{linearizable} puede esperar a que las escrituras concurrentes se propaguen a la mayoría \cite{mongodb8linearizable}. \\
+    \addlinespace
+    Tolerancia y recuperación &
+    Con tres réplicas, las lecturas con \texttt{QUORUM} pueden continuar si dos son accesibles. Otro nodo puede coordinar una nueva solicitud \cite{cassandra5dynamo}. &
+    Si el primario falla, la mayoría de los votantes permite elegir un nuevo primario elegible. Durante la elección se interrumpen las escrituras \cite{mongodb8elections}. \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\subsection{Discusión}
+En el laboratorio, la fila ya estaba escrita con \texttt{ALL} cuando detuve dos contenedores. Con una réplica activa, \texttt{ONE} devolvió la fila y \texttt{QUORUM} produjo el error \texttt{Unavailable}. En Cassandra se cuentan respuestas de las réplicas de la partición para esa operación. En MongoDB se cuentan votos del conjunto para mantener o elegir un primario. Si solo queda accesible uno de tres votantes, el conjunto pierde el primario al detectar la falta de mayoría y se interrumpen las escrituras. Una lectura podría seguir disponible en un secundario si la configuración del cliente y el nivel de lectura lo permiten \cite{mongodb8replication,mongodb8elections}.
+
+La elección depende de lo que la aplicación necesite garantizar. Para una consulta que tolera datos desactualizados, \texttt{ONE} permite aprovechar la réplica accesible. Para una consulta de un documento que deba reflejar todas las escrituras previas confirmadas por mayoría, MongoDB ofrece \texttt{linearizable} bajo las condiciones indicadas en su manual \cite{mongodb8linearizable}. El umbral de lectura \texttt{QUORUM} por sí solo cuenta respuestas. La garantía sobre el dato también depende del nivel de escritura y de las operaciones concurrentes \cite{cassandra5dynamo}.
+
+La prueba local registró si la consulta pudo completarse. Para comparar tiempos habría que controlar la carga, la red y las garantías solicitadas. Ferreira et al. usaron \texttt{ONE} y \texttt{ALL} en Cassandra, y compararon lecturas \texttt{local} y \texttt{linearizable} en MongoDB en su propio entorno \cite[sección \enquote{Database configurations}]{ferreira2024cloud}. Sus mediciones corresponden a esas configuraciones.
 
 \section{Postura crítica}
 \section{Conclusiones}
